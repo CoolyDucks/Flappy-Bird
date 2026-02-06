@@ -13,6 +13,8 @@ class MainScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor("#000000");
 
+    this.input.enabled = true;
+
     this.add.text(144, 100, "Flappy Bird", {
       font: "24px Arial",
       color: "#ffffff"
@@ -23,23 +25,28 @@ class MainScene extends Phaser.Scene {
       color: "#ffffff"
     }).setOrigin(0.5);
 
-    this.createButton(144, 200, "Mobile", () => this.startGame("mobile"));
-    this.createButton(144, 260, "Computer", () => this.startGame("pc"));
-    this.createButton(144, 320, "PlayStation", () => this.startGame("ps"));
+    this.createButton(144, 200, "Mobile", "mobile");
+    this.createButton(144, 260, "Computer", "pc");
+    this.createButton(144, 320, "PlayStation", "ps");
   }
 
-  createButton(x, y, label, callback) {
+  createButton(x, y, label, platform) {
     const btn = this.add.text(x, y, label, {
       font: "18px Arial",
-      color: "#00ffcc"
-    }).setOrigin(0.5).setInteractive();
+      color: "#00ffcc",
+      backgroundColor: "#111111",
+      padding: { x: 10, y: 6 }
+    })
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true });
 
-    btn.on("pointerdown", callback);
-  }
-
-  startGame(platform) {
-    PLATFORM = platform;
-    this.scene.restart();
+    btn.on("pointerdown", () => {
+      PLATFORM = platform;
+      btn.setColor("#ffffff");
+      this.time.delayedCall(150, () => {
+        this.scene.restart();
+      });
+    });
   }
 }
 
@@ -47,6 +54,11 @@ const config = {
   type: Phaser.AUTO,
   width: 288,
   height: 512,
+  input: {
+    mouse: true,
+    touch: true,
+    gamepad: true
+  },
   scene: MainScene
 };
 
