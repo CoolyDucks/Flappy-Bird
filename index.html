@@ -2,26 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Flappy Bird - WebKit</title>
+  <title>Flappy Bird</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      background: #000;
+      margin: 0; padding: 0;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
     }
-    canvas {
-      display: block;
-      margin: auto;
+    canvas { display: block; }
+    #hint {
+      margin-top: 10px;
+      color: #aaa;
+      font-size: 12px;
+      text-align: center;
     }
   </style>
-
-  <!-- Phaser official CDN -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
-
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
+  <p id="hint">
+    🎮 PlayStation: plug in your controller &amp; press ✕ to flap<br>
+    🖥 PC: Spacebar or ↑ arrow &nbsp;|&nbsp; 📱 Mobile: Tap the screen
+  </p>
 </body>
 </html>
