@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Bird</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* Phaser drops the canvas directly into body */
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
+    }
+
+    /* ── Toolbar – floats over the game ── */
+    #toolbar {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #111827dd;
+      border: 1px solid #2a3a5a;
+      border-radius: 10px;
+      padding: 5px 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 96vw;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.3s;
+    }
+
+    /* Hide toolbar in fullscreen */
+    #toolbar.hidden { opacity: 0; pointer-events: none; }
+
+    .tb-btn {
+      background: #1e2d42;
+      border: 1px solid #2e4a70;
+      color: #8ab4f8;
+      font-size: 13px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .tb-btn:hover { background: #2a4060; color: #fff; }
+    .tb-btn.active { background: #1a4080; color: #fff; border-color: #4a8aff; }
+
+    .tb-sep { width: 1px; height: 22px; background: #2a3a5a; margin: 0 2px; }
+
+    #fps-counter {
+      font-size: 12px;
+      color: #4ade80;
+      background: #0a1a0a;
+      border: 1px solid #1a4a1a;
+      border-radius: 6px;
+      padding: 4px 8px;
+      min-width: 62px;
+      text-align: center;
+      font-family: monospace;
+    }
+
+    #speed-label {
+      font-size: 12px;
+      color: #facc15;
+      min-width: 36px;
+      text-align: center;
+      font-family: monospace;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+</head>
+<body>
+
+  <div id="toolbar">
+    <div id="fps-counter">-- FPS</div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-pause" title="Pause (P)">⏸ Pause</button>
+    <button class="tb-btn" id="btn-mute"  title="Mute (M)">🔊 Sound</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-slower" title="Slower">◀ Slow</button>
+    <span id="speed-label">1×</span>
+    <button class="tb-btn" id="btn-faster" title="Faster">Fast ▶</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btn-fs" title="Fullscreen (F)">⛶ Full</button>
+  </div>
+
+<script src="script.js"></script>
+<script>
+window.addEventListener('load', () => {
+
+  // ── FPS ──────────────────────────────────────────────────────────────────
+  const fpsEl = document.getElementById('fps-counter');
+  let fpsFrames = 0, fpsLast = performance.now();
+  (function fpsLoop() {
+    fpsFrames++;
+    const now = performance.now();
+    if (now - fpsLast >= 500) {
+      const fps = Math.round(fpsFrames / ((now - fpsLast) / 1000));
+      fpsEl.style.color = fps >= 55 ? '#4ade80' : fps >= 40 ? '#facc15' : '#f87171';
+      fpsEl.textContent = fps + ' FPS';
+      fpsFrames = 0; fpsLast = now;
+    }
+    requestAnimationFrame(fpsLoop);
+  })();
+
+  // ── Pause ─────────────────────────────────────────────────────────────────
+  let paused = false;
+  const btnPause = document.getElementById('btn-pause');
+  function togglePause() {
+    paused = !paused;
+    if (window._phaserGame) {
+      paused ? window._phaserGame.loop.sleep() : window._phaserGame.loop.wake();
+    }
+    btnPause.textContent = paused ? '▶ Resume' : '⏸ Pause';
+    btnPause.classList.toggle('active', paused);
+  }
+  btnPause.addEventListener('click', togglePause);
+
+  // ── Mute ──────────────────────────────────────────────────────────────────
+  let muted = false;
+  const btnMute = document.getElementById('btn-mute');
+  function toggleMute() {
+    muted = !muted;
+    if (window._phaserGame) window._phaserGame.sound.mute = muted;
+    btnMute.textContent = muted ? '🔇 Muted' : '🔊 Sound';
+    btnMute.classList.toggle('active', muted);
+  }
+  btnMute.addEventListener('click', toggleMute);
+
+  // ── Speed ─────────────────────────────────────────────────────────────────
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  let speedIdx = 2;
+  const speedLabel = document.getElementById('speed-label');
+  function applySpeed() {
+    const s = speeds[speedIdx];
+    speedLabel.textContent = s + '×';
+    window._gameSpeed = s;
+    if (window._phaserGame) {
+      window._phaserGame.scene.scenes.forEach(sc => {
+        if (sc.time) sc.time.timeScale = s;
+      });
+    }
+  }
+  document.getElementById('btn-slower').addEventListener('click', () => { if (speedIdx > 0) { speedIdx--; applySpeed(); } });
+  document.getElementById('btn-faster').addEventListener('click', () => { if (speedIdx < speeds.length-1) { speedIdx++; applySpeed(); } });
+
+  // ── Fullscreen (all browsers + PlayStation) ───────────────────────────────
+  const btnFs = document.getElementById('btn-fs');
+  const toolbar = document.getElementById('toolbar');
+
+  function isFS() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+              document.mozFullScreenElement || document.msFullscreenElement);
+  }
+
+  function enterFS() {
+    const el = document.documentElement;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen ||
+               el.webkitRequestFullScreen || el.mozRequestFullScreen ||
+               el.msRequestFullscreen;
+    if (fn) fn.call(el);
+  }
+
+  function exitFS() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen ||
+               document.webkitCancelFullScreen || document.mozCancelFullScreen ||
+               document.msExitFullscreen;
+    if (fn) fn.call(document);
+  }
+
+  function toggleFS() { isFS() ? exitFS() : enterFS(); }
+
+  function onFSChange() {
+    const full = isFS();
+    btnFs.textContent = full ? '✕ Exit Full' : '⛶ Full';
+    btnFs.classList.toggle('active', full);
+    toolbar.classList.toggle('hidden', full);
+  }
+
+  btnFs.addEventListener('click', toggleFS);
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
+    .forEach(ev => document.addEventListener(ev, onFSChange));
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'f' || e.key === 'F') toggleFS();
+    if (e.key === 'p' || e.key === 'P') togglePause();
+    if (e.key === 'm' || e.key === 'M') toggleMute();
+  });
+
+});
+</script>
+</body>
+</html>
